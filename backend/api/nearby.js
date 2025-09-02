@@ -163,7 +163,8 @@ function fmt24(date) {
 
 function fmtDelta(now, when) {
 	const ms = Math.max(0, when - now);
-	const min = Math.round(ms / 60000);
+	// Prefer ceil so near-future times don't show as 0 min
+	const min = ms > 0 ? Math.ceil(ms / 60000) : 0;
 	if (min < 60) return `${min} min`;
 	const h = Math.floor(min / 60);
 	const m = min % 60;
@@ -194,13 +195,21 @@ async function getSubwayArrivalsForStopIds(stopIds, maxPerRoute = 2) {
 					if (!tu) continue;
 					const routeId = tu.trip && tu.trip.routeId ? String(tu.trip.routeId) : null;
 					const tripId = tu.trip && tu.trip.tripId ? String(tu.trip.tripId) : null;
-					const headsign = tu.trip && tu.trip.tripHeadsign ? String(tu.trip.tripHeadsign) : null;
+					let headsign = tu.trip && tu.trip.tripHeadsign ? String(tu.trip.tripHeadsign) : null;
 					const dir =
 						tu.trip && (tu.trip.directionId === 0 || tu.trip.directionId === 1)
 							? tu.trip.directionId
 							: null;
 					if (!routeId) continue;
 					const stus = Array.isArray(tu.stopTimeUpdate) ? tu.stopTimeUpdate : [];
+					// If headsign missing, fall back to last stop name in the update (likely terminus)
+					if (!headsign && stus.length) {
+						const lastStu = stus[stus.length - 1];
+						const destName = resolveStationNameFromStopId(
+							lastStu && lastStu.stopId ? String(lastStu.stopId) : null
+						);
+						if (destName) headsign = destName;
+					}
 					for (const s of stus) {
 						const sid = s.stopId ? String(s.stopId) : null;
 						if (!sid) continue;
@@ -291,7 +300,7 @@ async function getLirrArrivalsForStationId(stationId, maxCount = 2, branchFilter
 		if (!tu) continue;
 		const routeId = tu.trip && tu.trip.routeId ? String(tu.trip.routeId) : null;
 		const tripId = tu.trip && tu.trip.tripId ? String(tu.trip.tripId) : null;
-		const headsign = tu.trip && tu.trip.tripHeadsign ? String(tu.trip.tripHeadsign) : null;
+		let headsign = tu.trip && tu.trip.tripHeadsign ? String(tu.trip.tripHeadsign) : null;
 		const stus = Array.isArray(tu.stopTimeUpdate) ? tu.stopTimeUpdate : [];
 		const disp =
 			routeId && meta.get(routeId)
@@ -299,6 +308,12 @@ async function getLirrArrivalsForStationId(stationId, maxCount = 2, branchFilter
 				: routeId;
 		const branchNorm = normalizeBranchName(disp);
 		if (branchFilter && branchNorm !== branchFilter) continue;
+		// If headsign missing, fall back to terminal (last) stop name in sequence
+		if (!headsign && stus.length) {
+			const lastStu = stus[stus.length - 1];
+			const destName = resolveStationNameFromStopId(lastStu && lastStu.stopId ? String(lastStu.stopId) : null);
+			if (destName) headsign = destName;
+		}
 		for (const s of stus) {
 			const sid = s.stopId ? String(s.stopId) : null;
 			if (!sid) continue;
@@ -357,8 +372,8 @@ function parseSiriArrivals(json, maxPerLine = 2) {
 		const deliveries = json.Siri && json.Siri.ServiceDelivery && json.Siri.ServiceDelivery.StopMonitoringDelivery;
 		const d0 = Array.isArray(deliveries) ? deliveries[0] : deliveries;
 		const visits = (d0 && d0.MonitoredStopVisit) || [];
-		// Group by PublishedLineName
-		const byLine = new Map();
+		// Group by PublishedLineName + DestinationName (treat each direction/destination separately)
+		const byKey = new Map(); // `${line}|${dest}` -> [{when}]
 		for (const v of visits) {
 			const mvj = v.MonitoredVehicleJourney || {};
 			const line = mvj.PublishedLineName || (mvj.LineRef ? String(mvj.LineRef).split("_").pop() : "?");
@@ -371,17 +386,29 @@ function parseSiriArrivals(json, maxPerLine = 2) {
 				call.ExpectedDepartureTime;
 			const when = ts ? new Date(ts) : null;
 			if (!when) continue;
-			if (!byLine.has(line)) byLine.set(line, []);
-			byLine.get(line).push({ when, dest });
+			const key = `${line}|${dest}`;
+			if (!byKey.has(key)) byKey.set(key, []);
+			byKey.get(key).push({ when, dest });
 		}
-		for (const [line, arr] of byLine.entries()) {
+		for (const [key, arr] of byKey.entries()) {
+			const [line, dest] = key.split("|");
 			arr.sort((a, b) => a.when - b.when);
 			const top = arr.slice(0, maxPerLine);
 			const times = top.map((a) => `${fmt24(a.when)} (${fmtDelta(now, a.when)})`).join(" & ");
-			out.push({ line, dest: top[0] ? top[0].dest : "Unknown", times });
+			out.push({ line, dest: dest || (top[0] ? top[0].dest : "Unknown"), times });
 		}
 	} catch (_) {}
 	return out;
+}
+
+function resolveStationNameFromStopId(stopId) {
+	if (!stopId) return null;
+	const s = String(stopId);
+	// Strip suffix like N/S/E/W for subway
+	const base = s.replace(/[NSEW]$/i, "").split(/[ \-:]/)[0];
+	if (STATIONS && STATIONS[base] && STATIONS[base].name) return STATIONS[base].name;
+	if (STATIONS && STATIONS[s] && STATIONS[s].name) return STATIONS[s].name;
+	return null;
 }
 
 function findNearestStations(lat, lon) {
@@ -462,8 +489,8 @@ router.get("/preliminary", async (req, res) => {
 				const stopId = String(s.id || s.code || "")
 					.split("_")
 					.pop();
-				const siri = await siriArrivalsForStop(stopId, 4);
-				const parsed = parseSiriArrivals(siri, 2);
+				const siri = await siriArrivalsForStop(stopId, 6);
+				const parsed = parseSiriArrivals(siri, 3);
 				for (const p of parsed) {
 					busLines.push(`${p.line} to ${p.dest} @ ${s.name} at ${p.times}`);
 				}
