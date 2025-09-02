@@ -10,6 +10,7 @@ require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const mtaRoutes = require("./api/mta");
 const busRoutes = require("./api/bus");
+const nearbyRoutes = require("./api/nearby");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,6 +21,9 @@ app.use(express.json());
 // API routes
 app.use("/api/mta", mtaRoutes);
 app.use("/api/bus", busRoutes);
+// Expose new endpoints both at /api/* and root for convenience
+app.use("/api", nearbyRoutes);
+app.use("/", nearbyRoutes);
 
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, "../frontend")));
