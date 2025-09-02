@@ -69,29 +69,35 @@ function ensureDirFor(filePath) {
 	fs.mkdirSync(dir, { recursive: true });
 }
 
-function extractStopsTxt(zipBuf) {
+function extractFile(zipBuf, pattern) {
 	const zip = new AdmZip(zipBuf);
 	const entries = zip.getEntries();
-	const entry = entries.find((e) => /(^|\/)stops\.txt$/i.test(e.entryName));
-	if (!entry) throw new Error("stops.txt not found in GTFS zip");
+	const entry = entries.find((e) => pattern.test(e.entryName));
+	if (!entry) return null;
 	return entry.getData().toString("utf8");
 }
 
-function buildStations(stopsCsv) {
+function buildStationsAndParents(stopsCsv) {
 	const rows = parse(stopsCsv, { columns: true, skip_empty_lines: true, trim: true });
 	// GTFS: location_type 1 = Station, 0 = Stop/platform
 	const stations = {};
+	const parentOf = {};
 
 	for (const r of rows) {
 		const lt = (r.location_type || "").toString().trim();
-		if (lt !== "1") continue; // only explicit stations
 		const id = (r.stop_id || "").trim();
-		if (!id) continue;
-		const lat = Number(r.stop_lat);
-		const lng = Number(r.stop_lon);
-		const name = (r.stop_name || "").trim();
-		if (!Number.isFinite(lat) || !Number.isFinite(lng) || !name) continue;
-		stations[id] = { lat, lng, name };
+		const parent = (r.parent_station || "").trim();
+		if (lt === "1") {
+			if (!id) continue;
+			const lat = Number(r.stop_lat);
+			const lng = Number(r.stop_lon);
+			const name = (r.stop_name || "").trim();
+			if (!Number.isFinite(lat) || !Number.isFinite(lng) || !name) continue;
+			stations[id] = { lat, lng, name };
+			parentOf[id] = id;
+		} else {
+			if (id) parentOf[id] = parent || id;
+		}
 	}
 
 	// Fallback: derive station coordinates by averaging child platforms grouped by parent_station
@@ -124,6 +130,7 @@ function buildStations(stopsCsv) {
 					lng: sumLon / count,
 					name: name || parentId,
 				};
+				parentOf[parentId] = parentId;
 			}
 		}
 		if (Object.keys(stations).length === 0) {
@@ -131,7 +138,7 @@ function buildStations(stopsCsv) {
 		}
 	}
 
-	return stations;
+	return { stations, parentOf };
 }
 
 async function main() {
@@ -155,11 +162,63 @@ async function main() {
 		);
 		throw lastErr || new Error("No GTFS URL succeeded");
 	}
-	const stopsCsv = extractStopsTxt(buf);
-	const stations = buildStations(stopsCsv);
+	const stopsCsv = extractFile(buf, /(^|\/)stops\.txt$/i);
+	if (!stopsCsv) throw new Error("stops.txt not found in GTFS zip");
+	const { stations, parentOf } = buildStationsAndParents(stopsCsv);
+
+	// Try to build route adjacency edges from trips and stop_times
+	const tripsCsv = extractFile(buf, /(^|\/)trips\.txt$/i);
+	const stopTimesCsv = extractFile(buf, /(^|\/)stop_times\.txt$/i);
+	let edgesByRoute = {};
+	if (tripsCsv && stopTimesCsv) {
+		const trips = parse(tripsCsv, { columns: true, skip_empty_lines: true, trim: true });
+		const stopTimes = parse(stopTimesCsv, { columns: true, skip_empty_lines: true, trim: true });
+		const routeOfTrip = new Map();
+		for (const t of trips) {
+			const tripId = (t.trip_id || "").trim();
+			const routeId = (t.route_id || "").trim();
+			if (tripId && routeId) routeOfTrip.set(tripId, routeId);
+		}
+
+		const timesByTrip = new Map();
+		for (const st of stopTimes) {
+			const tripId = (st.trip_id || "").trim();
+			const stopId = (st.stop_id || "").trim();
+			const seq = Number(st.stop_sequence);
+			if (!tripId || !stopId || !Number.isFinite(seq)) continue;
+			if (!timesByTrip.has(tripId)) timesByTrip.set(tripId, []);
+			timesByTrip.get(tripId).push({ stopId, seq });
+		}
+
+		const edgeSetByRoute = new Map();
+		for (const [tripId, arr] of timesByTrip) {
+			const routeId = routeOfTrip.get(tripId);
+			if (!routeId) continue;
+			arr.sort((a, b) => a.seq - b.seq);
+			for (let i = 0; i < arr.length - 1; i++) {
+				const a = parentOf[arr[i].stopId] || arr[i].stopId;
+				const b = parentOf[arr[i + 1].stopId] || arr[i + 1].stopId;
+				if (!a || !b || a === b) continue;
+				if (!edgeSetByRoute.has(routeId)) edgeSetByRoute.set(routeId, new Set());
+				const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+				edgeSetByRoute.get(routeId).add(key);
+			}
+		}
+		edgesByRoute = {};
+		for (const [routeId, set] of edgeSetByRoute) {
+			edgesByRoute[routeId] = Array.from(set, (k) => k.split("|"));
+		}
+	} else {
+		console.warn("[fetch-stops] trips.txt or stop_times.txt missing; route_edges.json will not be generated");
+	}
 	ensureDirFor(out);
 	fs.writeFileSync(out, JSON.stringify(stations));
 	console.log(`[fetch-stops] Wrote ${Object.keys(stations).length} stations to ${out}`);
+	if (edgesByRoute && Object.keys(edgesByRoute).length) {
+		const edgesOut = path.resolve(path.dirname(out), "route_edges.json");
+		fs.writeFileSync(edgesOut, JSON.stringify(edgesByRoute));
+		console.log(`[fetch-stops] Wrote edges for ${Object.keys(edgesByRoute).length} routes to ${edgesOut}`);
+	}
 	// Explicitly exit to avoid lingering open handles in some environments
 	process.exit(0);
 }

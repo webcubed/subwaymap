@@ -6,6 +6,9 @@ yarn-error.log*
 
 # Environment variables
 .env
+.env*
+backend/.env
+backend/.env*
 .env.local
 .env.development.local
 .env.test.local
@@ -63,3 +66,6 @@ pids
 
 # Yarn Integrity file
 .yarn-integrity
+
+# Local app settings
+settings.cfg
