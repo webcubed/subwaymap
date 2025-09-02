@@ -144,10 +144,14 @@ async function refresh() {
 			if (!SHORT_TO_FULL.has(key)) SHORT_TO_FULL.set(key, String(rid));
 			if (!derivedShortToFull.has(key)) derivedShortToFull.set(key, String(rid));
 		}
-		// Build or update routes sidebar
-		await ensureSomeRoutesAvailable();
-		buildRoutesSidebar();
+		// First render stops (this fills STOP_INDEX for in-frame detection)
 		const stopIds = await renderStopsChunked(stops, renderId);
+		// Build routes sidebar from in-frame stops; if empty, fall back to agency-wide list
+		buildRoutesSidebar();
+		if (document.getElementById("routesList")?.innerHTML.includes("No routes")) {
+			await ensureSomeRoutesAvailable();
+			buildRoutesSidebar();
+		}
 
 		// If a new refresh started during rendering, abort
 		if (renderId !== currentRenderId) return;
@@ -570,18 +574,40 @@ function stopMatchesFilters(stop) {
 function buildRoutesSidebar() {
 	const container = document.getElementById("routesList");
 	if (!container) return;
-	const routes = Array.from(ROUTE_REFS.byShort.keys()).sort((a, b) =>
-		a.localeCompare(b, undefined, { numeric: true })
-	);
+	// Prefer routes from in-frame stops
+	const bounds = map.getBounds();
+	const routeShortsInView = new Set();
+	STOP_INDEX.forEach((info) => {
+		const p = L.latLng(info.lat, info.lon);
+		if (!bounds.contains(p)) return;
+		(info.routeIds || []).forEach((rid) => {
+			const short = deriveShortFromRouteId(rid);
+			if (!short) return;
+			routeShortsInView.add(short.toUpperCase());
+		});
+	});
+	let routes = Array.from(routeShortsInView);
+	if (!routes.length) {
+		// Fallback: use whatever references we currently have
+		routes = Array.from(ROUTE_REFS.byShort.keys());
+	}
+	routes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 	if (!routes.length) {
 		container.innerHTML = `<div class="routes-empty">No routes found in view. Loading agency routes…</div>`;
 		return;
 	}
 	const html = routes
 		.map((short) => {
-			const meta = ROUTE_REFS.byShort.get(short);
+			let meta = ROUTE_REFS.byShort.get(short);
+			if (!meta) {
+				// Construct a minimal meta from STOP_INDEX-derived full ids if missing
+				const fullId = SHORT_TO_FULL.get(short);
+				meta = fullId ? { id: fullId, shortName: short } : { id: short, shortName: short };
+				ROUTE_REFS.byShort.set(short, meta);
+				if (fullId) ROUTE_REFS.byId.set(fullId, meta);
+			}
 			const badge = routeBadge(short, meta);
-			const id = ROUTE_REFS.byShort.get(short).id;
+			const id = (ROUTE_REFS.byShort.get(short) || meta).id;
 			const seq = ROUTE_SEQ_CACHE.get(id);
 			const d0 = (seq && seq.dirNames && seq.dirNames[0]) || "Dir 0";
 			const d1 = (seq && seq.dirNames && seq.dirNames[1]) || "Dir 1";

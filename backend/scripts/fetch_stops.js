@@ -26,6 +26,13 @@ const DEFAULT_URLS = [
 	"http://web.mta.info/developers/data/nyct/subway/google_transit.zip",
 ].filter(Boolean);
 
+// Optional LIRR static GTFS feed (merged if available)
+const DEFAULT_LIRR_URLS = [
+	process.env.LIRR_GTFS_STATIC_URL,
+	// Official S3 static info referenced by MTA developers
+	"https://rrgtfsfeeds.s3.amazonaws.com/gtfslirr.zip",
+].filter(Boolean);
+
 function parseArgs(argv) {
 	const args = { out: path.resolve(__dirname, "../../frontend/stations.json"), url: undefined };
 	for (let i = 2; i < argv.length; i++) {
@@ -133,8 +140,28 @@ function buildStationsAndParents(stopsCsv) {
 				parentOf[parentId] = parentId;
 			}
 		}
+
+		// Secondary fallback: treat every stop as its own station (e.g., LIRR often omits parent_station)
 		if (Object.keys(stations).length === 0) {
-			throw new Error("Parsed zero stations from stops.txt (no explicit stations or parent groups found)");
+			let added = 0;
+			for (const r of rows) {
+				const id = (r.stop_id || "").trim();
+				if (!id) continue;
+				const lat = Number(r.stop_lat);
+				const lon = Number(r.stop_lon);
+				const name = (r.stop_name || id).toString().trim();
+				if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+				if (!stations[id]) {
+					stations[id] = { lat, lng: lon, name };
+					parentOf[id] = id;
+					added++;
+				}
+			}
+			if (added === 0) {
+				throw new Error(
+					"Parsed zero stations from stops.txt (no explicit stations, parents, or valid stops found)"
+				);
+			}
 		}
 	}
 
@@ -211,6 +238,74 @@ async function main() {
 	} else {
 		console.warn("[fetch-stops] trips.txt or stop_times.txt missing; route_edges.json will not be generated");
 	}
+	// Attempt to merge LIRR static feed into stations and edges if reachable
+	try {
+		let lirrBuf;
+		for (const u of DEFAULT_LIRR_URLS) {
+			try {
+				console.log(`[fetch-stops] Downloading LIRR GTFS static from: ${u}`);
+				lirrBuf = await download(u);
+				break;
+			} catch (e) {
+				console.warn(`[fetch-stops] Failed to download LIRR from ${u}: ${e.message}`);
+			}
+		}
+		if (lirrBuf) {
+			const lStopsCsv = extractFile(lirrBuf, /(^|\/)stops\.txt$/i);
+			if (lStopsCsv) {
+				const { stations: lStations, parentOf: lParentOf } = buildStationsAndParents(lStopsCsv);
+				// Merge LIRR stations
+				Object.assign(stations, lStations);
+
+				// LIRR edges
+				const lTripsCsv = extractFile(lirrBuf, /(^|\/)trips\.txt$/i);
+				const lStopTimesCsv = extractFile(lirrBuf, /(^|\/)stop_times\.txt$/i);
+				if (lTripsCsv && lStopTimesCsv) {
+					const lTrips = parse(lTripsCsv, { columns: true, skip_empty_lines: true, trim: true });
+					const lStopTimes = parse(lStopTimesCsv, { columns: true, skip_empty_lines: true, trim: true });
+					const lRouteOfTrip = new Map();
+					for (const t of lTrips) {
+						const tripId = (t.trip_id || "").trim();
+						const routeId = (t.route_id || "").trim();
+						if (tripId && routeId) lRouteOfTrip.set(tripId, routeId);
+					}
+					const lTimesByTrip = new Map();
+					for (const st of lStopTimes) {
+						const tripId = (st.trip_id || "").trim();
+						const stopId = (st.stop_id || "").trim();
+						const seq = Number(st.stop_sequence);
+						if (!tripId || !stopId || !Number.isFinite(seq)) continue;
+						if (!lTimesByTrip.has(tripId)) lTimesByTrip.set(tripId, []);
+						lTimesByTrip.get(tripId).push({ stopId, seq });
+					}
+					const lEdgeSetByRoute = new Map();
+					for (const [tripId, arr] of lTimesByTrip) {
+						const routeId = lRouteOfTrip.get(tripId);
+						if (!routeId) continue;
+						arr.sort((a, b) => a.seq - b.seq);
+						for (let i = 0; i < arr.length - 1; i++) {
+							const a = lParentOf[arr[i].stopId] || arr[i].stopId;
+							const b = lParentOf[arr[i + 1].stopId] || arr[i + 1].stopId;
+							if (!a || !b || a === b) continue;
+							if (!lEdgeSetByRoute.has(routeId)) lEdgeSetByRoute.set(routeId, new Set());
+							const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+							lEdgeSetByRoute.get(routeId).add(key);
+						}
+					}
+					for (const [routeId, set] of lEdgeSetByRoute) {
+						const arr = Array.from(set, (k) => k.split("|"));
+						if (!edgesByRoute[routeId]) edgesByRoute[routeId] = arr;
+						else edgesByRoute[routeId] = edgesByRoute[routeId].concat(arr);
+					}
+					console.log(`[fetch-stops] Merged LIRR edges for ${lEdgeSetByRoute.size} routes`);
+				}
+				console.log(`[fetch-stops] Merged ${Object.keys(lStations).length} LIRR stations`);
+			}
+		}
+	} catch (e) {
+		console.warn(`[fetch-stops] LIRR merge skipped due to error: ${e.message}`);
+	}
+
 	ensureDirFor(out);
 	fs.writeFileSync(out, JSON.stringify(stations));
 	console.log(`[fetch-stops] Wrote ${Object.keys(stations).length} stations to ${out}`);
