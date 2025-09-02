@@ -1,19 +1,35 @@
 {
   "version": 2,
+  "name": "nyc-subway-realtime-map",
   "builds": [
     {
-      "src": "backend/server.js",
+      "src": "server.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "public/**/*",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "backend/server.js"
+      "dest": "/server.js"
+    },
+    {
+      "src": "/health",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/(.*\\.(css|js|html|png|jpg|jpeg|gif|svg|ico))",
+      "dest": "/public/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/$1"
+      "dest": "/public/index.html"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }

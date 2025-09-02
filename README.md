@@ -1,170 +1,149 @@
-# NYC Subway Real-Time Map
+# 🚇 NYC Subway Real-Time Map
 
-A modern web application that displays real-time NYC subway train locations using the MTA's GTFS-realtime feeds.
+A modern web application displaying live NYC subway train locations using MTA's GTFS-realtime feeds.
 
-## Features
+## 🚀 Quick Deploy
 
--   🚇 Real-time train data from all MTA subway lines
--   🗺️ Interactive map showing train locations
--   📱 Responsive design for mobile and desktop
--   🔄 Auto-refresh every 30 seconds
--   🎨 Color-coded subway lines
--   ⚡ No API key required (uses free MTA feeds)
+### Deploy to Vercel (Recommended)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/dantraynor/subwaymap&branch=clean-deployment)
 
-## Quick Start
+### Deploy to Railway (Alternative)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/dantraynor/subwaymap&branch=clean-deployment)
 
-### Prerequisites
+**Steps for Vercel:**
+1. Click the Vercel button above
+2. Sign in with GitHub
+3. Click "Create" to deploy
+4. Wait 2-3 minutes for deployment
+5. Your live subway map will be ready at `https://your-project.vercel.app`!
 
--   Node.js (version 14 or higher)
--   npm or yarn
+---
 
-### Installation
+## ✨ Features
 
-1. Clone the repository:
+- 🚇 **Real-time train data** from all MTA subway lines
+- 🗺️ **Interactive map** with live train locations  
+- 📱 **Responsive design** for mobile and desktop
+- 🔄 **Auto-refresh** every 30 seconds
+- 🎨 **Color-coded subway lines** matching MTA standards
+- ⚡ **No API key required** - uses free MTA feeds
+- 🌐 **Custom domain support**
+
+## 🌐 Connect Your Custom Domain
+
+### After Deploying to Vercel:
+
+1. **Get your Vercel URL** (e.g., `your-project.vercel.app`)
+2. **In your Spaceship DNS settings**, add:
+   ```
+   Type: CNAME
+   Name: subway
+   Value: your-project.vercel.app
+   ```
+3. **In Vercel dashboard**:
+   - Go to your project settings
+   - Click "Domains"
+   - Add `subway.yourdomain.com`
+   - Vercel will verify the DNS automatically
+
+4. **Access your site at**: `subway.yourdomain.com` 🎉
+
+## 🛠️ Local Development
 
 ```bash
+# Clone and setup
 git clone https://github.com/dantraynor/subwaymap.git
 cd subwaymap
-```
+git checkout clean-deployment
 
-2. Switch to the new branch:
-
-```bash
-git checkout feature/nodejs-realtime-website
-```
-
-3. Install backend dependencies:
-
-```bash
-cd backend
+# Install dependencies
 npm install
-```
 
-4. Start the development server:
-
-```bash
+# Start development server
 npm run dev
+
+# Open http://localhost:3000
 ```
 
-5. Open your browser and go to:
+## 📊 API Endpoints
 
-```text
-http://localhost:3000
+- `GET /api/mta/feeds/all` - All real-time train data
+- `GET /api/mta/feed/:feedId` - Specific line group data
+- `GET /health` - Health check
+
+### Available Feed IDs:
+- `1234567` - Lines 1,2,3,4,5,6,7
+- `ace` - Lines A,C,E
+- `bdfm` - Lines B,D,F,M
+- `g` - Line G
+- `jz` - Lines J,Z
+- `l` - Line L
+- `nqrw` - Lines N,Q,R,W
+- `si` - Staten Island Railway
+
+## 🏗️ Project Structure
+
 ```
-
-If you don't immediately see many station markers, the app will attempt to fetch the GTFS static feed and generate `frontend/stations.json` on first run. You can also generate it manually with:
-
-```bash
-cd backend
-npm run fetch:stops
-```
-
-## Project Structure
-
-```text
 subwaymap/
-├── backend/
-│   ├── api/
-│   │   └── mta.js          # MTA API routes
-│   ├── package.json        # Backend dependencies
-│   └── server.js           # Express server
-├── frontend/
-│   ├── index.html          # Main HTML file
-│   ├── style.css           # Styling
-│   ├── script.js           # Main app logic
-│   └── map.js              # Map functionality
-├── .gitignore
-└── README.md
+├── server.js              # Express server with API
+├── package.json           # Dependencies
+├── vercel.json            # Vercel configuration
+├── public/
+│   ├── index.html         # Main webpage
+│   ├── style.css          # Styling
+│   └── app.js             # Frontend logic
+└── README.md              # This file
 ```
 
-## API Endpoints
+## 🔧 Technologies Used
 
--   `GET /api/mta/feeds/all` - Get all real-time train data
--   `GET /api/mta/feed/:feedId` - Get specific feed data
+- **Backend**: Node.js, Express.js
+- **Frontend**: Vanilla JavaScript, HTML5, CSS3
+- **Map**: Leaflet.js
+- **Data**: MTA GTFS-realtime feeds
+- **Deployment**: Vercel, Railway
 
-Available feed IDs:
+## 📈 Performance
 
--   `1234567` - Lines 1,2,3,4,5,6,7
--   `ace` - Lines A,C,E
--   `bdfm` - Lines B,D,F,M
--   `g` - Line G
--   `jz` - Lines J,Z
--   `l` - Line L
--   `nqrw` - Lines N,Q,R,W
--   `si` - Staten Island Railway
+- **Fast loading**: ≈ 2-3 seconds initial load
+- **Real-time updates**: 30-second refresh cycle
+- **Mobile optimized**: Works on all devices
+- **Serverless**: Scales automatically with traffic
 
-## Development
+## 🐛 Troubleshooting
 
-### Running in Development Mode
+### Common Issues:
 
-```bash
-cd backend
-npm run dev
-```
+1. **Build fails**: Check Node.js version (requires 16+)
+2. **No train data**: MTA feeds may be temporarily down
+3. **CORS errors**: Server includes proper CORS headers
+4. **Map not loading**: Check internet connection
 
-This uses `nodemon` to automatically restart the server when files change.
+### Debug Steps:
 
-### Adding More Stations
+1. Open browser developer tools (F12)
+2. Check Console for errors
+3. Verify `/api/mta/feeds/all` returns data
+4. Check Network tab for failed requests
 
-The map now automatically generates `frontend/stations.json` from the MTA GTFS static feed (`stops.txt`). On startup, the backend will try to download and extract stations. You can re-generate anytime:
+## 📚 Data Sources
 
-```bash
-cd backend
-npm run fetch:stops
-```
+- **Real-time**: [MTA GTFS-realtime feeds](https://api.mta.info/#/subwayRealTimeFeeds)
+- **Static**: [MTA GTFS static data](https://new.mta.info/developers)
 
-Optional: You can override the GTFS source via env var `GTFS_STATIC_URL` or flag `--url`.
-
-## Deployment
-
-### Production Build
-
-```bash
-cd backend
-npm start
-```
-
-### Environment Variables
-
-Create a `.env` file in the root directory if needed:
-
-```env
-PORT=3000
-NODE_ENV=production
-```
-
-## Technologies Used
-
--   **Backend**: Node.js, Express.js
--   **Frontend**: Vanilla JavaScript, HTML5, CSS3
--   **Map**: Leaflet.js
--   **Data**: MTA GTFS-realtime feeds
--   **Protocol Buffers**: gtfs-realtime-bindings
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
 4. Submit a pull request
 
-## License
+## 📄 License
 
-MIT License - see LICENSE file for details
+MIT License - feel free to use this project!
 
-## Data Sources
+---
 
--   Real-time data: [MTA GTFS-realtime feeds](https://api.mta.info/#/subwayRealTimeFeeds)
--   Static data: [MTA GTFS static feeds](https://new.mta.info/developers)
+**Built with ❤️ for NYC transit enthusiasts**
 
-## Troubleshooting
-
-### Common Issues
-
-1. **No train data showing**: Check the browser console for API errors
-2. **Map not loading**: Ensure you have an internet connection for map tiles
-3. **Server won't start**: Make sure port 3000 is available
-
-### API Rate Limits
-
-The MTA feeds are free but may have rate limits. The app refreshes every 30 seconds which should be well within limits.
+*Real-time data provided by the MTA*
