@@ -1,35 +1,39 @@
 {
-  "version": 2,
-  "name": "nyc-subway-realtime-map",
-  "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "public/**/*",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/health",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/(.*\\.(css|js|html|png|jpg|jpeg|gif|svg|ico))",
-      "dest": "/public/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/index.html"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+	"version": 2,
+	"name": "nyc-subway-realtime-map",
+	"builds": [
+		{
+			"src": "backend/server.js",
+			"use": "@vercel/node"
+		},
+		{
+			"src": "frontend/**/*",
+			"use": "@vercel/static"
+		}
+	],
+	"routes": [
+		{
+			"src": "/api/(.*)",
+			"dest": "/backend/server.js"
+		},
+		{
+			"src": "/health",
+			"dest": "/backend/server.js"
+		},
+		{
+			"src": "/(preliminary|nearby)",
+			"dest": "/backend/server.js"
+		},
+		{
+			"src": "/(.*\\.(css|js|html|png|jpg|jpeg|gif|svg|ico|json))",
+			"dest": "/frontend/$1"
+		},
+		{
+			"src": "/(.*)",
+			"dest": "/frontend/index.html"
+		}
+	],
+	"env": {
+		"NODE_ENV": "production"
+	}
 }
