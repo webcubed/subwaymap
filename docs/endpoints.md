@@ -1,7 +1,8 @@
 ## Endpoints
 
-- **/by-location?lat=[latitude]&lon=[longitude]**  
-Returns the 5 stations nearest the provided lat/lon pair.
+-   **/by-location?lat=[latitude]&lon=[longitude]**  
+    Returns the 5 stations nearest the provided lat/lon pair.
+
 ```javascript
 {
     "data": [
@@ -101,8 +102,9 @@ Returns the 5 stations nearest the provided lat/lon pair.
 }
 ```
 
-- **/by-route/[route]**  
-Returns all stations on the provided train route.  
+-   **/by-route/[route]**  
+    Returns all stations on the provided train route.
+
 ```javascript
 {
     "data": [
@@ -200,11 +202,12 @@ Returns all stations on the provided train route.
 }
 ```
 
-- **/by-id/[id],[id],[id]...**  
-Returns the stations with the provided IDs, in the order provided. IDs should be comma separated with no space characters.
+-   **/by-id/[id],[id],[id]...**  
+    Returns the stations with the provided IDs, in the order provided. IDs should be comma separated with no space characters.
 
-- **/routes**  
-Lists available routes.  
+-   **/routes**  
+    Lists available routes.
+
 ```javascript
 {
     "data": [

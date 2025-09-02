@@ -4,44 +4,50 @@ A modern web application that displays real-time NYC subway train locations usin
 
 ## Features
 
-- 🚇 Real-time train data from all MTA subway lines
-- 🗺️ Interactive map showing train locations
-- 📱 Responsive design for mobile and desktop
-- 🔄 Auto-refresh every 30 seconds
-- 🎨 Color-coded subway lines
-- ⚡ No API key required (uses free MTA feeds)
+-   🚇 Real-time train data from all MTA subway lines
+-   🗺️ Interactive map showing train locations
+-   📱 Responsive design for mobile and desktop
+-   🔄 Auto-refresh every 30 seconds
+-   🎨 Color-coded subway lines
+-   ⚡ No API key required (uses free MTA feeds)
 
 ## Quick Start
 
 ### Prerequisites
-- Node.js (version 14 or higher)
-- npm or yarn
+
+-   Node.js (version 14 or higher)
+-   npm or yarn
 
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/dantraynor/subwaymap.git
 cd subwaymap
 ```
 
 2. Switch to the new branch:
+
 ```bash
 git checkout feature/nodejs-realtime-website
 ```
 
 3. Install backend dependencies:
+
 ```bash
 cd backend
 npm install
 ```
 
 4. Start the development server:
+
 ```bash
 npm run dev
 ```
 
 5. Open your browser and go to:
+
 ```
 http://localhost:3000
 ```
@@ -66,22 +72,24 @@ subwaymap/
 
 ## API Endpoints
 
-- `GET /api/mta/feeds/all` - Get all real-time train data
-- `GET /api/mta/feed/:feedId` - Get specific feed data
+-   `GET /api/mta/feeds/all` - Get all real-time train data
+-   `GET /api/mta/feed/:feedId` - Get specific feed data
 
 Available feed IDs:
-- `1234567` - Lines 1,2,3,4,5,6,7
-- `ace` - Lines A,C,E
-- `bdfm` - Lines B,D,F,M
-- `g` - Line G
-- `jz` - Lines J,Z
-- `l` - Line L
-- `nqrw` - Lines N,Q,R,W
-- `si` - Staten Island Railway
+
+-   `1234567` - Lines 1,2,3,4,5,6,7
+-   `ace` - Lines A,C,E
+-   `bdfm` - Lines B,D,F,M
+-   `g` - Line G
+-   `jz` - Lines J,Z
+-   `l` - Line L
+-   `nqrw` - Lines N,Q,R,W
+-   `si` - Staten Island Railway
 
 ## Development
 
 ### Running in Development Mode
+
 ```bash
 cd backend
 npm run dev
@@ -100,13 +108,16 @@ The map currently shows a limited set of stations. To add more:
 ## Deployment
 
 ### Production Build
+
 ```bash
 cd backend
 npm start
 ```
 
 ### Environment Variables
+
 Create a `.env` file in the root directory if needed:
+
 ```
 PORT=3000
 NODE_ENV=production
@@ -114,11 +125,11 @@ NODE_ENV=production
 
 ## Technologies Used
 
-- **Backend**: Node.js, Express.js
-- **Frontend**: Vanilla JavaScript, HTML5, CSS3
-- **Map**: Leaflet.js
-- **Data**: MTA GTFS-realtime feeds
-- **Protocol Buffers**: gtfs-realtime-bindings
+-   **Backend**: Node.js, Express.js
+-   **Frontend**: Vanilla JavaScript, HTML5, CSS3
+-   **Map**: Leaflet.js
+-   **Data**: MTA GTFS-realtime feeds
+-   **Protocol Buffers**: gtfs-realtime-bindings
 
 ## Contributing
 
@@ -133,8 +144,8 @@ MIT License - see LICENSE file for details
 
 ## Data Sources
 
-- Real-time data: [MTA GTFS-realtime feeds](https://api.mta.info/#/subwayRealTimeFeeds)
-- Static data: [MTA GTFS static feeds](https://new.mta.info/developers)
+-   Real-time data: [MTA GTFS-realtime feeds](https://api.mta.info/#/subwayRealTimeFeeds)
+-   Static data: [MTA GTFS static feeds](https://new.mta.info/developers)
 
 ## Troubleshooting
 
