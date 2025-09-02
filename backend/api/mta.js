@@ -29,13 +29,7 @@ router.get("/feed/:feedId", async (req, res) => {
 			return res.status(404).json({ error: "Feed not found" });
 		}
 
-		const response = await fetch(feedUrl);
-
-		if (!response.ok) {
-			throw new Error(`HTTP error! status: ${response.status}`);
-		}
-
-		const buffer = await response.buffer();
+		const buffer = await fetchProto(feedUrl);
 		const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(buffer);
 
 		const processedData = processFeedData(feed);
@@ -52,14 +46,7 @@ router.get("/feeds/all", async (req, res) => {
 		const allFeedsData = await Promise.all(
 			Object.entries(MTA_FEEDS).map(async ([feedId, feedUrl]) => {
 				try {
-					const response = await fetch(feedUrl);
-
-					if (!response.ok) {
-						console.error(`Error fetching feed ${feedId}: ${response.status}`);
-						return { feedId, error: true, status: response.status };
-					}
-
-					const buffer = await response.buffer();
+					const buffer = await fetchProto(feedUrl);
 					const feed = GtfsRealtimeBindings.transit_realtime.FeedMessage.decode(buffer);
 
 					return {
@@ -115,3 +102,16 @@ function processFeedData(feed) {
 }
 
 module.exports = router;
+
+async function fetchProto(url) {
+	const response = await fetch(url, {
+		headers: {
+			Accept: "application/x-protobuf, application/octet-stream;q=0.9,*/*;q=0.8",
+		},
+	});
+	if (!response.ok) {
+		throw new Error(`HTTP ${response.status} fetching ${url}`);
+	}
+	const ab = await response.arrayBuffer();
+	return Buffer.from(ab);
+}

@@ -2,6 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+// Silence dotenv's informational logs
+if (!process.env.DOTENV_LOG_LEVEL) {
+	process.env.DOTENV_LOG_LEVEL = "none";
+}
 require("dotenv").config();
 
 const mtaRoutes = require("./api/mta");
