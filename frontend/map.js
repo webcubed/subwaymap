@@ -2,9 +2,8 @@
 let leafletMap;
 let trainLocationMarkers = [];
 
-// Sample station coordinates - You'll want to expand this with more stations
-// Get comprehensive data from MTA's GTFS static feed (stops.txt)
-const STATION_COORDINATES_DATA = {
+// Fallback minimal stations; at runtime we'll try to load stations.json generated from GTFS
+let STATION_COORDINATES_DATA = {
 	// Times Square area
 	A27: { lat: 40.755417, lng: -73.986664, name: "Times Sq-42 St (A,C,E)" },
 	R16: { lat: 40.755417, lng: -73.986664, name: "Times Sq-42 St (N,Q,R,W)" },
@@ -37,6 +36,25 @@ const STATION_COORDINATES_DATA = {
 	A32: { lat: 40.720595, lng: -74.007107, name: "Chambers St (A,C)" },
 	R30: { lat: 40.720595, lng: -74.007107, name: "Chambers St (R,W)" },
 };
+
+// Try to load stations.json (generated from GTFS stops) and replace the fallback map.
+async function loadStationsJson() {
+	try {
+		const res = await fetch("stations.json", { cache: "no-cache" });
+		if (!res.ok) return;
+		const data = await res.json();
+		// Expect { [stop_id]: { lat, lng, name } }
+		if (data && typeof data === "object" && Object.keys(data).length) {
+			STATION_COORDINATES_DATA = data;
+			console.log(`Loaded ${Object.keys(data).length} stations from stations.json`);
+		}
+	} catch (e) {
+		// ignore, will use fallback
+	}
+}
+
+// Kick off loading eagerly
+loadStationsJson();
 
 function initLeafletMap(mapId) {
 	// Create map centered on NYC

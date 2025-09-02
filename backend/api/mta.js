@@ -1,6 +1,10 @@
 const express = require("express");
-const fetch = require("node-fetch");
 const GtfsRealtimeBindings = require("gtfs-realtime-bindings");
+// Use global fetch if available (Node 18+), else lazy-load node-fetch for Node <18
+const fetch =
+	typeof globalThis.fetch === "function"
+		? globalThis.fetch.bind(globalThis)
+		: (...args) => import("node-fetch").then(({ default: f }) => f(...args));
 const router = express.Router();
 
 // MTA Feed URLs - No API key required!

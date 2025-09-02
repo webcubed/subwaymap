@@ -5,14 +5,18 @@
 	"main": "server.js",
 	"scripts": {
 		"start": "node server.js",
-		"dev": "nodemon server.js"
+		"dev": "nodemon server.js",
+		"fetch:stops": "node ./scripts/fetch_stops.js",
+		"prestart": "node ./scripts/fetch_stops.js || echo 'Continuing without stations.json'"
 	},
 	"dependencies": {
 		"express": "5.1.0",
 		"cors": "^2.8.5",
 		"dotenv": "17.2.1",
 		"gtfs-realtime-bindings": "^1.1.1",
-		"node-fetch": "3.3.2"
+		"node-fetch": "3.3.2",
+		"adm-zip": "^0.5.16",
+		"csv-parse": "6.1.0"
 	},
 	"devDependencies": {
 		"nodemon": "3.1.10"

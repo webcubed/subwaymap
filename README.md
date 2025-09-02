@@ -48,13 +48,20 @@ npm run dev
 
 5. Open your browser and go to:
 
-```
+```text
 http://localhost:3000
+```
+
+If you don't immediately see many station markers, the app will attempt to fetch the GTFS static feed and generate `frontend/stations.json` on first run. You can also generate it manually with:
+
+```bash
+cd backend
+npm run fetch:stops
 ```
 
 ## Project Structure
 
-```
+```text
 subwaymap/
 ├── backend/
 │   ├── api/
@@ -99,11 +106,14 @@ This uses `nodemon` to automatically restart the server when files change.
 
 ### Adding More Stations
 
-The map currently shows a limited set of stations. To add more:
+The map now automatically generates `frontend/stations.json` from the MTA GTFS static feed (`stops.txt`). On startup, the backend will try to download and extract stations. You can re-generate anytime:
 
-1. Download the MTA's GTFS static data from: https://new.mta.info/developers
-2. Extract station coordinates from `stops.txt`
-3. Add them to the `STATION_COORDINATES_DATA` object in `frontend/map.js`
+```bash
+cd backend
+npm run fetch:stops
+```
+
+Optional: You can override the GTFS source via env var `GTFS_STATIC_URL` or flag `--url`.
 
 ## Deployment
 
@@ -118,7 +128,7 @@ npm start
 
 Create a `.env` file in the root directory if needed:
 
-```
+```env
 PORT=3000
 NODE_ENV=production
 ```
