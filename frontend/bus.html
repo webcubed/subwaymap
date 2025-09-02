@@ -38,6 +38,67 @@
 				color: #6b7280;
 				font-size: 12px;
 			}
+			/* Sidebar */
+			#sidebar {
+				position: absolute;
+				top: 52px;
+				bottom: 0;
+				left: 0;
+				width: 300px;
+				max-width: 80vw;
+				background: #ffffff;
+				border-right: 1px solid #e5e7eb;
+				box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+				padding: 10px;
+				overflow: auto;
+				transform: translateX(-100%);
+				transition: transform 0.2s ease-out;
+				z-index: 1000;
+			}
+			#sidebar.open {
+				transform: translateX(0);
+			}
+			.routes-header {
+				font-weight: 600;
+				margin: 6px 0 10px;
+			}
+			.route-row {
+				display: grid;
+				grid-template-columns: auto 1fr;
+				align-items: center;
+				gap: 8px 10px;
+				padding: 6px 4px;
+				border-bottom: 1px dashed #f1f5f9;
+			}
+			.route-badge-btn {
+				background: transparent;
+				border: none;
+				cursor: pointer;
+				padding: 0;
+			}
+			.dir-buttons {
+				display: flex;
+				gap: 6px;
+				flex-wrap: wrap;
+			}
+			.dir-chip {
+				font-size: 11px;
+				padding: 2px 6px;
+				border-radius: 10px;
+				border: 1px solid #e5e7eb;
+				cursor: pointer;
+				background: #f8fafc;
+			}
+			.dir-chip.active {
+				background: #e0f2fe;
+				border-color: #93c5fd;
+			}
+			/* Responsive: show sidebar inline on wide screens if desired */
+			@media (min-width: 1100px) {
+				#sidebar {
+					transform: translateX(0);
+				}
+			}
 		</style>
 		<link rel="preconnect" href="https://unpkg.com" />
 		<link rel="preconnect" href="https://tile.openstreetmap.org" />
@@ -49,8 +110,14 @@
 				<button id="refresh">Refresh</button>
 				<label><input type="checkbox" id="autoRefresh" checked /> Auto-refresh</label>
 				<span class="status" id="status">Loading…</span>
+				<button id="routesToggle" title="Show routes">Routes</button>
+				<button id="locate" title="Use my location">Locate</button>
 			</div>
 		</header>
+		<div id="sidebar" aria-label="Routes and filters" role="region">
+			<div class="routes-header">Filter by route and direction</div>
+			<div id="routesList"></div>
+		</div>
 		<div id="map"></div>
 
 		<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

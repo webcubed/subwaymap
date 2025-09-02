@@ -151,6 +151,18 @@ router.get("/stops-for-agency", async (req, res) => {
 	}
 });
 
+// GET /api/bus/routes-for-agency?agencyId=MTA
+router.get("/routes-for-agency", async (req, res) => {
+	try {
+		const agencyId = String(req.query.agencyId || "MTA");
+		const data = await obaFetch(`/routes-for-agency/${encodeURIComponent(agencyId)}.json`);
+		res.json(data);
+	} catch (err) {
+		console.error("/routes-for-agency error:", err.message);
+		res.status(500).json({ error: "Failed to fetch routes-for-agency", details: err.message });
+	}
+});
+
 // GET /api/bus/stops-for-bounds?minLat=&minLon=&maxLat=&maxLon=&maxCount=&includePolylines=
 router.get("/stops-for-bounds", async (req, res) => {
 	try {
@@ -197,6 +209,22 @@ router.get("/stops-for-bounds", async (req, res) => {
 	} catch (err) {
 		console.error("/stops-for-bounds error:", err.message);
 		res.status(500).json({ error: "Failed to fetch stops-for-bounds", details: err.message });
+	}
+});
+
+// GET /api/bus/stops-for-route?routeId=MTA%20NYCT_B63&includePolylines=true
+router.get("/stops-for-route", async (req, res) => {
+	try {
+		const routeId = String(req.query.routeId || "").trim();
+		if (!routeId) return res.status(400).json({ error: "routeId is required" });
+		const includePolylines = req.query.includePolylines;
+		const data = await obaFetch(`/stops-for-route/${encodeURIComponent(routeId)}.json`, {
+			includePolylines,
+		});
+		res.json(data);
+	} catch (err) {
+		console.error("/stops-for-route error:", err.message);
+		res.status(500).json({ error: "Failed to fetch stops-for-route", details: err.message });
 	}
 });
 
