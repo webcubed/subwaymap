@@ -4,16 +4,16 @@ These endpoints return human-readable strings (text/plain) with arrivals summari
 
 ### GET /preliminary?lat={lat}&lon={lon}
 
--   Purpose: Broad, lightweight summary for the area around the provided coordinates.
--   What it returns (as a single string):
-    -   Subway: For the nearest subway station, each line’s next 2 arrivals. Times in 24-hour format with countdowns.
-    -   Bus: Up to two nearest bus stops (often opposing directions). For each stop, next 2 arrivals per route.
-    -   LIRR: Only if within 1 mile (≈1609 m) and on the Port Washington branch; shows the next 2 arrivals.
--   Data sources: MTA GTFS-realtime (Subway + LIRR), OneBusAway and SIRI (Bus).
--   Notes:
-    -   Bus endpoints require an MTA BusTime API key (env var `MTA_API_KEY`). If unavailable or upstream fails, the Bus section may be omitted.
-    -   Subway/LIRR do not require an API key.
-    -   Times are rendered in 24-hour format (HH:mm) and include a countdown like “(16 min)” or “(1 hr 1 min)”.
+- Purpose: Broad, lightweight summary for the area around the provided coordinates.
+- What it returns (as a single string):
+  - Subway: For the nearest subway station, each line’s next 2 arrivals. Times in 24-hour format with countdowns.
+  - Bus: Up to two nearest bus stops (often opposing directions). For each stop, next 2 arrivals per route.
+  - LIRR: Only if within 1 mile (≈1609 m) and on the Port Washington branch; shows the next 2 arrivals.
+- Data sources: MTA GTFS-realtime (Subway + LIRR), OneBusAway and SIRI (Bus).
+- Notes:
+  - Bus endpoints require an MTA BusTime API key (env var `MTA_API_KEY`). If unavailable or upstream fails, the Bus section may be omitted.
+  - Subway/LIRR do not require an API key.
+  - Times are rendered in 24-hour format (HH:mm) and include a countdown like “(16 min)” or “(1 hr 1 min)”.
 
 Example response (text):
 
@@ -28,27 +28,27 @@ To Port Washington @ Broadway at 19:45 (31 min) & 20:15 (1 hr 1 min)
 
 Parameters:
 
--   lat (required): latitude
--   lon (required): longitude
+- lat (required): latitude
+- lon (required): longitude
 
 HTTP details:
 
--   Method: GET
--   Content-Type: text/plain
+- Method: GET
+- Content-Type: text/plain
 
 ---
 
 ### GET /nearby?lat={lat}&lon={lon}
 
--   Purpose: Precise, detailed summary at very close range. Chooses the single closest item among bus stop, subway station, or LIRR station and provides more details.
--   What it returns (as a single string):
-    -   Exactly one section (Bus/Subway/LIRR) for the closest entity within ~150 m.
-    -   Next 3 arrivals for that entity, with line, destination, stop/station name, 24-hour times, and countdowns.
-    -   If the closest is a subway station with multiple lines, each line appears with its own 3 arrivals. Similarly for a bus stop with multiple routes.
--   Data sources: MTA GTFS-realtime (Subway + LIRR), OneBusAway and SIRI (Bus).
--   Notes:
-    -   Bus requires `MTA_API_KEY`; if unavailable, bus results will not be included.
-    -   Unlike `/preliminary`, `/nearby` includes all LIRR branches (not limited to Port Washington) if LIRR is the closest.
+- Purpose: Precise, detailed summary at very close range. Chooses the single closest item among bus stop, subway station, or LIRR station and provides more details.
+- What it returns (as a single string):
+  - Exactly one section (Bus/Subway/LIRR) for the closest entity within ~150 m.
+  - Next 3 arrivals for that entity, with line, destination, stop/station name, 24-hour times, and countdowns.
+  - If the closest is a subway station with multiple lines, each line appears with its own 3 arrivals. Similarly for a bus stop with multiple routes.
+- Data sources: MTA GTFS-realtime (Subway + LIRR), OneBusAway and SIRI (Bus).
+- Notes:
+  - Bus requires `MTA_API_KEY`; if unavailable, bus results will not be included.
+  - Unlike `/preliminary`, `/nearby` includes all LIRR branches (not limited to Port Washington) if LIRR is the closest.
 
 Example response (text):
 
@@ -58,26 +58,26 @@ Subway:
 
 Parameters:
 
--   lat (required): latitude
--   lon (required): longitude
+- lat (required): latitude
+- lon (required): longitude
 
 HTTP details:
 
--   Method: GET
--   Content-Type: text/plain
+- Method: GET
+- Content-Type: text/plain
 
 ---
 
 Operational notes
 
--   These endpoints rely on a generated `frontend/stations.json` (and static GTFS) to resolve station locations and map station → platform stop_ids for subway.
--   If the bus key is missing or upstream APIs are unavailable, the affected section will be omitted, but other sections still return when possible.
+- These endpoints rely on a generated `frontend/stations.json` (and static GTFS) to resolve station locations and map station → platform stop_ids for subway.
+- If the bus key is missing or upstream APIs are unavailable, the affected section will be omitted, but other sections still return when possible.
 
 ---
 
 ## Legacy JSON endpoints
 
--   **/by-location?lat=[latitude]&lon=[longitude]**  
+- **/by-location?lat=[latitude]&lon=[longitude]**  
     Returns the 5 stations nearest the provided lat/lon pair.
 
 ```javascript
@@ -179,7 +179,7 @@ Operational notes
 }
 ```
 
--   **/by-route/[route]**  
+- **/by-route/[route]**  
     Returns all stations on the provided train route.
 
 ```javascript
@@ -279,10 +279,10 @@ Operational notes
 }
 ```
 
--   **/by-id/[id],[id],[id]...**  
+- **/by-id/[id],[id],[id]...**  
     Returns the stations with the provided IDs, in the order provided. IDs should be comma separated with no space characters.
 
--   **/routes**  
+- **/routes**  
     Lists available routes.
 
 ```javascript
