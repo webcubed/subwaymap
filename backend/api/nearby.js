@@ -678,4 +678,109 @@ router.get("/nearby", async (req, res) => {
 	}
 });
 
+// Helper: find nearest bus stop by expanding search radius until at least one is found
+async function findNearestBusStop(lat, lon) {
+	const radii = [150, 400, 800, 1500, 2500];
+	let all = [];
+	for (const r of radii) {
+		try {
+			const oba = await obaStopsForLocation(lat, lon, { radius: r, maxCount: 50 });
+			const stops = (oba && oba.data && (oba.data.list || oba.data.stops)) || [];
+			all = all.concat(stops);
+			if (all.length) break;
+		} catch (_) {}
+	}
+	if (!all.length) return null;
+	// Deduplicate by id and choose nearest
+	const seen = new Set();
+	const unique = [];
+	for (const s of all) {
+		const id = s.id || s.code;
+		if (!id || seen.has(id)) continue;
+		seen.add(id);
+		unique.push(s);
+	}
+	unique.sort(
+		(a, b) =>
+			haversine({ lat, lon }, { lat: a.lat, lon: a.lon }) - haversine({ lat, lon }, { lat: b.lat, lon: b.lon })
+	);
+	return unique[0] || null;
+}
+
+// Nearby subway-only: always return nearest subway station, with 3 arrivals per route
+router.get("/nearby/subway", async (req, res) => {
+	try {
+		const lat = Number(req.query.lat);
+		const lon = Number(req.query.lon);
+		if (!Number.isFinite(lat) || !Number.isFinite(lon))
+			return res.status(400).send("Bad request: lat/lon required");
+		await ensureStaticLoaded();
+		const { nearestSubway } = findNearestStations(lat, lon);
+		const linesOut = [];
+		if (nearestSubway) {
+			const stopIds = stationStopIdsForSubway(nearestSubway.id);
+			const subwayLines = await getSubwayArrivalsForStopIds(stopIds, 3);
+			subwayLines.forEach((ln) => {
+				const idx = ln.indexOf(" at ");
+				if (idx > 0) linesOut.push(`${ln.slice(0, idx)} @ ${nearestSubway.name}${ln.slice(idx)}`);
+				else linesOut.push(`${ln} @ ${nearestSubway.name}`);
+			});
+		}
+		res.type("text/plain").send(linesOut.join("\n") || "");
+	} catch (e) {
+		res.status(500).send(`Error: ${e.message}`);
+	}
+});
+
+// Nearby bus-only: always return nearest bus stop, with 3 arrivals per line/destination
+router.get("/nearby/bus", async (req, res) => {
+	try {
+		const lat = Number(req.query.lat);
+		const lon = Number(req.query.lon);
+		if (!Number.isFinite(lat) || !Number.isFinite(lon))
+			return res.status(400).send("Bad request: lat/lon required");
+		const linesOut = [];
+		try {
+			const stop = await findNearestBusStop(lat, lon);
+			if (stop) {
+				const stopId = String(stop.id || stop.code || "")
+					.split("_")
+					.pop();
+				try {
+					const siri = await siriArrivalsForStop(stopId, 9);
+					const parsed = parseSiriArrivals(siri, 3);
+					parsed.forEach((p) => {
+						linesOut.push(`${p.line} to ${p.dest} @ ${stop.name} at ${p.times}`);
+					});
+				} catch (_) {}
+			}
+		} catch (_) {}
+		res.type("text/plain").send(linesOut.join("\n") || "");
+	} catch (e) {
+		res.status(500).send(`Error: ${e.message}`);
+	}
+});
+
+// Nearby LIRR-only: always return nearest LIRR station (no branch restriction), 3 arrivals
+router.get("/nearby/lirr", async (req, res) => {
+	try {
+		const lat = Number(req.query.lat);
+		const lon = Number(req.query.lon);
+		if (!Number.isFinite(lat) || !Number.isFinite(lon))
+			return res.status(400).send("Bad request: lat/lon required");
+		await ensureStaticLoaded();
+		const { nearestLirr } = findNearestStations(lat, lon);
+		const linesOut = [];
+		if (nearestLirr) {
+			const lirrLines = await getLirrArrivalsForStationId(nearestLirr.id, 3, null);
+			lirrLines.forEach((ln) => {
+				linesOut.push(`${ln} @ ${nearestLirr.name}`);
+			});
+		}
+		res.type("text/plain").send(linesOut.join("\n") || "");
+	} catch (e) {
+		res.status(500).send(`Error: ${e.message}`);
+	}
+});
+
 module.exports = router;
