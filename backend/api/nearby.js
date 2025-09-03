@@ -457,17 +457,12 @@ router.get("/preliminary", async (req, res) => {
 			const stopIds = stationStopIdsForSubway(nearestSubway.id);
 			const subwayLines = await getSubwayArrivalsForStopIds(stopIds, 2);
 			if (subwayLines.length) {
-				linesOut.push("Subway:");
-				subwayLines.forEach((ln, i) => {
-					if (i === 0) {
-						const idx = ln.indexOf(" at ");
-						if (idx > 0) {
-							linesOut.push(`${ln.slice(0, idx)} @ ${nearestSubway.name}${ln.slice(idx)}`);
-						} else {
-							linesOut.push(`${ln} @ ${nearestSubway.name}`);
-						}
+				subwayLines.forEach((ln) => {
+					const idx = ln.indexOf(" at ");
+					if (idx > 0) {
+						linesOut.push(`${ln.slice(0, idx)} @ ${nearestSubway.name}${ln.slice(idx)}`);
 					} else {
-						linesOut.push(ln);
+						linesOut.push(`${ln} @ ${nearestSubway.name}`);
 					}
 				});
 			}
@@ -496,7 +491,6 @@ router.get("/preliminary", async (req, res) => {
 				}
 			}
 			if (busLines.length) {
-				linesOut.push("Bus:");
 				busLines.forEach((ln) => linesOut.push(ln));
 			}
 		} catch (_) {}
@@ -506,10 +500,8 @@ router.get("/preliminary", async (req, res) => {
 			const pw = normalizeBranchName("port washington");
 			const lirrLines = await getLirrArrivalsForStationId(nearestLirr.id, 2, pw);
 			if (lirrLines.length) {
-				linesOut.push("LIRR:");
-				lirrLines.forEach((ln, i) => {
-					if (i === 0) linesOut.push(`${ln} @ ${nearestLirr.name}`);
-					else linesOut.push(ln);
+				lirrLines.forEach((ln) => {
+					linesOut.push(`${ln} @ ${nearestLirr.name}`);
 				});
 			}
 		}
@@ -566,7 +558,6 @@ router.get("/nearby", async (req, res) => {
 			const siri = await siriArrivalsForStop(stopId, 6);
 			const parsed = parseSiriArrivals(siri, 3);
 			if (parsed.length) {
-				linesOut.push("Bus:");
 				parsed.forEach((p) => {
 					linesOut.push(`${p.line} to ${p.dest} @ ${nearestBus.name} at ${p.times}`);
 				});
@@ -575,27 +566,20 @@ router.get("/nearby", async (req, res) => {
 			const stopIds = stationStopIdsForSubway(nearestSubway.id);
 			const subwayLines = await getSubwayArrivalsForStopIds(stopIds, 3);
 			if (subwayLines.length) {
-				linesOut.push("Subway:");
-				subwayLines.forEach((ln, i) => {
-					if (i === 0) {
-						const idx = ln.indexOf(" at ");
-						if (idx > 0) {
-							linesOut.push(`${ln.slice(0, idx)} @ ${nearestSubway.name}${ln.slice(idx)}`);
-						} else {
-							linesOut.push(`${ln} @ ${nearestSubway.name}`);
-						}
+				subwayLines.forEach((ln) => {
+					const idx = ln.indexOf(" at ");
+					if (idx > 0) {
+						linesOut.push(`${ln.slice(0, idx)} @ ${nearestSubway.name}${ln.slice(idx)}`);
 					} else {
-						linesOut.push(ln);
+						linesOut.push(`${ln} @ ${nearestSubway.name}`);
 					}
 				});
 			}
 		} else if (winner.type === "lirr" && nearestLirr) {
 			const lirrLines = await getLirrArrivalsForStationId(nearestLirr.id, 3, null);
 			if (lirrLines.length) {
-				linesOut.push("LIRR:");
-				lirrLines.forEach((ln, i) => {
-					const suffix = i === 0 ? ` @ ${nearestLirr.name}` : "";
-					linesOut.push(`${ln}${suffix}`);
+				lirrLines.forEach((ln) => {
+					linesOut.push(`${ln} @ ${nearestLirr.name}`);
 				});
 			}
 		}
