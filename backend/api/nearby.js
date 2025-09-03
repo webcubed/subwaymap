@@ -514,6 +514,95 @@ router.get("/preliminary", async (req, res) => {
 	}
 });
 
+// Subway-only preliminary
+router.get("/preliminary/subway", async (req, res) => {
+	try {
+		const lat = Number(req.query.lat);
+		const lon = Number(req.query.lon);
+		if (!Number.isFinite(lat) || !Number.isFinite(lon))
+			return res.status(400).send("Bad request: lat/lon required");
+		await ensureStaticLoaded();
+		const { nearestSubway } = findNearestStations(lat, lon);
+		const linesOut = [];
+		if (nearestSubway) {
+			const stopIds = stationStopIdsForSubway(nearestSubway.id);
+			const subwayLines = await getSubwayArrivalsForStopIds(stopIds, 2);
+			if (subwayLines.length) {
+				subwayLines.forEach((ln) => {
+					const idx = ln.indexOf(" at ");
+					if (idx > 0) {
+						linesOut.push(`${ln.slice(0, idx)} @ ${nearestSubway.name}${ln.slice(idx)}`);
+					} else {
+						linesOut.push(`${ln} @ ${nearestSubway.name}`);
+					}
+				});
+			}
+		}
+		res.type("text/plain").send(linesOut.join("\n") || "");
+	} catch (e) {
+		res.status(500).send(`Error: ${e.message}`);
+	}
+});
+
+// Bus-only preliminary
+router.get("/preliminary/bus", async (req, res) => {
+	try {
+		const lat = Number(req.query.lat);
+		const lon = Number(req.query.lon);
+		if (!Number.isFinite(lat) || !Number.isFinite(lon))
+			return res.status(400).send("Bad request: lat/lon required");
+		const linesOut = [];
+		try {
+			const oba = await obaStopsForLocation(lat, lon, { radius: 400, maxCount: 10 });
+			const stops = (oba && oba.data && (oba.data.list || oba.data.stops)) || [];
+			stops.sort(
+				(a, b) =>
+					haversine({ lat, lon }, { lat: a.lat, lon: a.lon }) -
+					haversine({ lat, lon }, { lat: b.lat, lon: b.lon })
+			);
+			const selected = stops.slice(0, 2);
+			for (const s of selected) {
+				const stopId = String(s.id || s.code || "")
+					.split("_")
+					.pop();
+				const siri = await siriArrivalsForStop(stopId, 6);
+				const parsed = parseSiriArrivals(siri, 3);
+				for (const p of parsed) {
+					linesOut.push(`${p.line} to ${p.dest} @ ${s.name} at ${p.times}`);
+				}
+			}
+		} catch (_) {}
+		res.type("text/plain").send(linesOut.join("\n") || "");
+	} catch (e) {
+		res.status(500).send(`Error: ${e.message}`);
+	}
+});
+
+// LIRR-only preliminary (Port Washington within 1 mile)
+router.get("/preliminary/lirr", async (req, res) => {
+	try {
+		const lat = Number(req.query.lat);
+		const lon = Number(req.query.lon);
+		if (!Number.isFinite(lat) || !Number.isFinite(lon))
+			return res.status(400).send("Bad request: lat/lon required");
+		await ensureStaticLoaded();
+		const { nearestLirr } = findNearestStations(lat, lon);
+		const linesOut = [];
+		if (nearestLirr && nearestLirr.dist <= 1609) {
+			const pw = normalizeBranchName("port washington");
+			const lirrLines = await getLirrArrivalsForStationId(nearestLirr.id, 2, pw);
+			if (lirrLines.length) {
+				lirrLines.forEach((ln) => {
+					linesOut.push(`${ln} @ ${nearestLirr.name}`);
+				});
+			}
+		}
+		res.type("text/plain").send(linesOut.join("\n") || "");
+	} catch (e) {
+		res.status(500).send(`Error: ${e.message}`);
+	}
+});
+
 // Build string for /nearby (pick the single closest item and show 3 arrivals with more details)
 router.get("/nearby", async (req, res) => {
 	try {
